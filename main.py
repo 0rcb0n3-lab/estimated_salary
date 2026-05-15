@@ -20,7 +20,7 @@ def predict_salary(salary_from, salary_to):
 def predict_rub_salary_habr(vacancy):
     salary = vacancy.get('salary')
 
-    if salary and (salary.get('from') is not None or salary.get('to') is not None):
+    if salary and (salary.get('from') or salary.get('to')):
         pass
 
     else:
@@ -38,9 +38,9 @@ def predict_rub_salary_habr(vacancy):
     return predict_salary(salary_from, salary_to)
 
 
-def sort_habr_vacancies_by_language(language):
+def get_habr_vacancies_by_language(language):
     url = 'https://career.habr.com/api/frontend/vacancies'
-    sorted_vacancies = []
+    vacancies = []
     page = 1
     total_pages = 1
     vacancies_found = 0
@@ -55,18 +55,18 @@ def sort_habr_vacancies_by_language(language):
             total_pages = data.get('meta', {}).get('totalPages', 1)
             vacancies_found = data.get('meta', {}).get('totalResults', 0)
 
-        sorted_vacancies.extend(data.get('list', []))
+        vacancies.extend(data.get('list', []))
         page += 1
         time.sleep(0.2)
 
-    return sorted_vacancies, vacancies_found
+    return vacancies, vacancies_found
 
 
 def get_habr_stats(language):
-    sorted_vacancies, vacancies_found = sort_habr_vacancies_by_language(language)
+    vacancies, vacancies_found = get_habr_vacancies_by_language(language)
     salaries = []
 
-    for vacancy in sorted_vacancies[:min(100, len(sorted_vacancies))]:
+    for vacancy in vacancies[:min(100, len(vacancies))]:
         salary = predict_rub_salary_habr(vacancy)
         if salary:
             salaries.append(salary)
@@ -147,7 +147,7 @@ def create_table(title, data):
         ])
 
     table = SingleTable(table_data, title)
-    print(table.table)
+    return table
 
 
 def main():
@@ -168,8 +168,12 @@ def main():
 
     habr_stats = {language: get_habr_stats(language) for language in languages}
     sjob_stats = {language: get_sjob_stats(sjob_api_key, language) for language in languages}
-    create_table("Habr Moscow", habr_stats)
-    create_table("SuperJob Moscow", sjob_stats)
+
+    habr_table = create_table("Habr Moscow", habr_stats)
+    sjob_table = create_table("SuperJob Moscow", sjob_stats)
+
+    print(habr_table.table)
+    print(sjob_table.table)
 
 
 if __name__ == '__main__':
